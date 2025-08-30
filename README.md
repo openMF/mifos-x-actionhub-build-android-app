@@ -24,7 +24,7 @@ build types, and secure release configurations.
     fetch-depth: 0
 
 - name: Build Android Debug
-  uses: openMF/kmp-build-android-app-action@v1.0.0
+  uses: openMF/mifos-x-actionhub-build-android-app@v1.0.2
   with:
     android_package_name: 'myapp'
 ```
@@ -33,7 +33,7 @@ build types, and secure release configurations.
 
 ```yaml
 - name: Build Android Release
-  uses: openMF/kmp-build-android-app-action@v1.0.0
+  uses: openMF/mifos-x-actionhub-build-android-app@v1.0.2
   id: build-android
   with:
     android_package_name: 'myapp'
@@ -203,7 +203,7 @@ For release builds, you must provide:
 
 ## Requirements
 
-- Java 17
+- Java (configurable; defaults to 17)
 - Gradle
 - Android Gradle Plugin
 - Configured flavors (Demo/Prod)
