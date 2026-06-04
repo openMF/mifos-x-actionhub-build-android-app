@@ -1,0 +1,82 @@
+# Composite action: Build Android APK / AAB (debug or release)
+# Patched for fastlane-modernization sub-plan 12:
+#   - AC19: SHA-pin ruby/setup-ruby
+#   - AC18: drop the `increment_build_number` add_plugin line (sub-plan 05
+#           removed the Fastfile lane that referenced it)
+name: 'Build Android App'
+description: 'Build a debug or release Android APK / AAB.'
+
+inputs:
+  android_package_name:
+    description: 'Android Gradle module name'
+    required: true
+  build_type:
+    description: "'Debug' or 'Release'"
+    required: true
+  key_store:
+    description: 'Base64-encoded release keystore (release builds only)'
+    required: false
+  key_store_password:
+    description: 'Keystore password'
+    required: false
+  key_store_alias:
+    description: 'Keystore alias'
+    required: false
+  key_store_alias_password:
+    description: 'Keystore alias password'
+    required: false
+  google_services:
+    description: 'Base64-encoded google-services.json'
+    required: false
+  java-version:
+    description: 'JDK version'
+    required: false
+    default: '17'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: ${{ inputs.java-version }}
+
+    - name: Setup Ruby (SHA-pinned — AC19)
+      uses: ruby/setup-ruby@afeafc3d1ab54a631816aba4c914a0081c12ff2f  # v1.232.0
+      with:
+        bundler-cache: true
+
+    - name: Install Fastlane plugins (pinned — AC18)
+      shell: bash
+      run: |
+        # NOTE: `fastlane add_plugin increment_build_number` removed —
+        # sub-plan 05 deleted the Fastfile lane that consumed it. No pinned
+        # add_plugin lines remain for this composite action.
+        echo "Fastlane plugins: none required."
+
+    - name: Inflate secrets (release builds only)
+      if: ${{ inputs.build_type == 'Release' }}
+      shell: bash
+      env:
+        KEYSTORE_B64: ${{ inputs.key_store }}
+        GOOGLE_SERVICES_B64: ${{ inputs.google_services }}
+      run: |
+        mkdir -p keystores "${{ inputs.android_package_name }}"
+        [ -n "$KEYSTORE_B64" ] && echo "$KEYSTORE_B64" | base64 --decode > keystores/release_keystore.keystore || true
+        [ -n "$GOOGLE_SERVICES_B64" ] && echo "$GOOGLE_SERVICES_B64" | base64 --decode > "${{ inputs.android_package_name }}/google-services.json" || true
+
+    - name: Build
+      shell: bash
+      run: |
+        if [ "${{ inputs.build_type }}" = "Release" ]; then
+          ./gradlew :${{ inputs.android_package_name }}:assembleRelease
+        else
+          ./gradlew :${{ inputs.android_package_name }}:assembleDebug
+        fi
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-app
+        path: '**/build/outputs/apk/**/*.apk'
