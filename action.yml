@@ -32,6 +32,10 @@ inputs:
     description: 'JDK version'
     required: false
     default: '17'
+  kmp_flavor:
+    description: 'Product flavor to build (e.g. prod, demo, bankA). Selects assemble<Flavor>Release for Release builds.'
+    required: false
+    default: 'prod'
 
 runs:
   using: 'composite'
@@ -70,7 +74,10 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.build_type }}" = "Release" ]; then
-          ./gradlew :${{ inputs.android_package_name }}:assembleRelease
+          # Capitalize first letter so e.g. "bankA" → "BankA" → assembleBankARelease
+          FLAVOR="${{ inputs.kmp_flavor }}"
+          FLAVOR_CAP="${FLAVOR^}"
+          ./gradlew :${{ inputs.android_package_name }}:assemble${FLAVOR_CAP}Release
         else
           ./gradlew :${{ inputs.android_package_name }}:assembleDebug
         fi
